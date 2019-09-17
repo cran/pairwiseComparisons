@@ -51,15 +51,16 @@
 #'   }
 #'
 #' @importFrom dplyr select rename mutate mutate_if everything full_join vars
+#' @importFrom dplyr group_nest
 #' @importFrom stats p.adjust pairwise.t.test na.omit aov TukeyHSD var sd
 #' @importFrom stringr str_replace
 #' @importFrom WRS2 lincon rmmcp
-#' @importFrom tidyr gather spread separate
+#' @importFrom tidyr gather spread separate unnest nest
 #' @importFrom rlang !! enquo as_string ensym
 #' @importFrom tibble as_tibble rowid_to_column enframe
 #' @importFrom jmv anovaNP anovaRMNP
 #' @importFrom forcats fct_relabel
-#' @importFrom purrrlyr by_row
+#' @importFrom purrr map
 #'
 #' @examples
 #'
@@ -71,6 +72,7 @@
 #'
 #' # for reproducibility
 #' set.seed(123)
+#'
 #' library(pairwiseComparisons)
 #'
 #' # parametric
@@ -472,25 +474,43 @@ pairwise_comparisons <- function(data,
       .predicate = is.factor,
       .funs = ~ as.character(.)
     ) %>%
-    purrrlyr::by_row(
-      .d = .,
-      ..f = ~ specify_decimal_p(
-        x = .$p.value,
-        k = k,
-        p.value = TRUE
-      ),
-      .collate = "rows",
-      .to = "label",
-      .labels = TRUE
-    ) %>%
+    dplyr::mutate(.data = ., rowid = dplyr::row_number()) %>%
+    dplyr::group_nest(.tbl = ., rowid) %>%
     dplyr::mutate(
       .data = .,
-      p.value.label = dplyr::case_when(
-        label == "< 0.001" ~ paste("list(~italic(p)<=", "0.001", ")", sep = " "),
-        TRUE ~ paste("list(~italic(p)==", label, ")", sep = " ")
+      label = data %>%
+        purrr::map(
+          .x = .,
+          .f = ~ specify_decimal_p(x = .$p.value, k = k, p.value = TRUE)
+        )
+    )
+
+  # unnesting the dataframe
+  df %<>% tidyr::unnest(., cols = c(data, label))
+
+  # formatting label
+  if (p.adjust.method == "none") {
+    df %<>%
+      dplyr::mutate(
+        .data = .,
+        label = dplyr::case_when(
+          label == "< 0.001" ~ paste("list(~italic(p)['unadjusted']<=", "0.001", ")", sep = " "),
+          TRUE ~ paste("list(~italic(p)['unadjusted']==", label, ")", sep = " ")
+        )
       )
-    ) %>%
-    dplyr::select(.data = ., -label)
+  } else {
+    df %<>%
+      dplyr::mutate(
+        .data = .,
+        label = dplyr::case_when(
+          label == "< 0.001" ~ paste("list(~italic(p)['adjusted']<=", "0.001", ")", sep = " "),
+          TRUE ~ paste("list(~italic(p)['adjusted']==", label, ")", sep = " ")
+        )
+      )
+  }
+
+  # removing unnecessary columns
+  df %<>% dplyr::select(.data = ., -rowid)
 
   # return
   return(tibble::as_tibble(df))
