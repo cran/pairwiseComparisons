@@ -15,7 +15,6 @@ pairwise_comparisons(
   var.equal = FALSE,
   p.adjust.method = "holm",
   k = 2,
-  messages = TRUE,
   ...
 )
 
@@ -29,7 +28,6 @@ pairwise_p(
   var.equal = FALSE,
   p.adjust.method = "holm",
   k = 2,
-  messages = TRUE,
   ...
 )
 }
@@ -69,9 +67,6 @@ comparisons. Possible methods are: \code{"holm"} (default), \code{"hochberg"},
 \item{k}{Number of digits after decimal point (should be an integer)
 (Default: \code{k = 2}).}
 
-\item{messages}{Decides whether messages references, notes, and warnings are
-to be displayed (Default: \code{TRUE}).}
-
 \item{...}{Current ignored.}
 }
 \value{
@@ -88,7 +83,7 @@ of \emph{p}-values in the American Psychological Association (APA) mandated
 format:
 \itemize{
 \item \code{ns} : > 0.05
-\item \verb{*} : < 0.05
+\item \code{*} : < 0.05
 \item \verb{**} : < 0.01
 \item \verb{***} : < 0.001
 }
