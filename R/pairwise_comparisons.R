@@ -1,4 +1,4 @@
-#' @title Multiple pairwise comparison tests
+#' @title Multiple pairwise comparison tests with tidy data
 #' @name pairwise_comparisons
 #' @description Calculate parametric, non-parametric, and robust pairwise
 #'   comparisons between group levels with corrections for multiple testing.
@@ -51,7 +51,6 @@
 #' @importFrom dplyr select rename mutate mutate_if everything full_join vars
 #' @importFrom dplyr group_nest
 #' @importFrom stats p.adjust pairwise.t.test na.omit aov TukeyHSD var sd
-#' @importFrom stringr str_replace
 #' @importFrom WRS2 lincon rmmcp
 #' @importFrom tidyr gather spread separate unnest nest
 #' @importFrom rlang !! enquo as_string ensym
@@ -193,8 +192,8 @@ pairwise_comparisons <- function(data,
           .data = .,
           {{ x }} := forcats::fct_relabel(
             .f = {{ x }},
-            .fun = ~ stringr::str_replace(
-              string = .x,
+            .fun = ~ gsub(
+              x = .x,
               pattern = "-",
               replacement = "_"
             )
@@ -216,8 +215,8 @@ pairwise_comparisons <- function(data,
         dplyr::mutate_at(
           .tbl = .,
           .vars = dplyr::vars(dplyr::matches("^group[0-9]$")),
-          .funs = ~ stringr::str_replace(
-            string = .,
+          .funs = ~ gsub(
+            x = .,
             pattern = "_",
             replacement = "-"
           )
@@ -420,25 +419,15 @@ pairwise_comparisons <- function(data,
     tidyr::unnest(data = ., cols = c(data, label))
 
   # formatting label
-  if (p.adjust.method == "none") {
-    df %<>%
-      dplyr::mutate(
-        .data = .,
-        label = dplyr::case_when(
-          label == "< 0.001" ~ paste("list(~italic(p)['unadjusted']<=", "0.001", ")", sep = " "),
-          TRUE ~ paste("list(~italic(p)['unadjusted']==", label, ")", sep = " ")
-        )
+  adjust_text <- ifelse(p.adjust.method == "none", "unadjusted", "adjusted")
+  df %<>%
+    dplyr::mutate(
+      .data = .,
+      label = dplyr::case_when(
+        label == "< 0.001" ~ paste("list(~italic(p)[", adjust_text, "]<=", "0.001", ")", sep = " "),
+        TRUE ~ paste("list(~italic(p)[", adjust_text, "]==", label, ")", sep = " ")
       )
-  } else {
-    df %<>%
-      dplyr::mutate(
-        .data = .,
-        label = dplyr::case_when(
-          label == "< 0.001" ~ paste("list(~italic(p)['adjusted']<=", "0.001", ")", sep = " "),
-          TRUE ~ paste("list(~italic(p)['adjusted']==", label, ")", sep = " ")
-        )
-      )
-  }
+    )
 
   # removing unnecessary columns
   df %<>%
