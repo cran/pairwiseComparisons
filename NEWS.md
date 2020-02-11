@@ -1,4 +1,8 @@
-# pairwiseComparisons 0.1.4
+# pairwiseComparisons 0.2.5
+
+  - Maintenance release to import functions from `ipmisc`.
+
+# pairwiseComparisons 0.2.0
 
 BREAKING CHANGES
 
