@@ -2,7 +2,6 @@
 #' @name pairwise_comparisons
 #' @description Calculate parametric, non-parametric, and robust pairwise
 #'   comparisons between group levels with corrections for multiple testing.
-#' @author \href{https://github.com/IndrajeetPatil}{Indrajeet Patil}
 #'
 #' @param data A dataframe (or a tibble) from which variables specified are to
 #'   be taken. A matrix or tables will **not** be accepted.
@@ -29,6 +28,7 @@
 #' @param ... Current ignored.
 #' @inheritParams stats::t.test
 #' @inheritParams WRS2::rmmcp
+#' @inheritParams tidyBF::bf_ttest
 #'
 #' @return A tibble dataframe containing two columns corresponding to group
 #'   levels being compared with each other (`group1` and `group2`) and `p.value`
@@ -38,9 +38,8 @@
 #'   columns across the different types of statistics, there will be additional
 #'   columns specific to the `type` of test being run.
 #'
-#'   The `significance` column will display asterisks to indicate significance
-#'   of *p*-values in the American Psychological Association (APA) mandated
-#'   format:
+#'   The `significance` column asterisks indicate significance levels of
+#'   *p*-values in the American Psychological Association (APA) mandated format:
 #'   \itemize{
 #'   \item `ns` : > 0.05
 #'   \item `*` : < 0.05
@@ -48,16 +47,18 @@
 #'   \item `***` : < 0.001
 #'   }
 #'
-#' @importFrom dplyr select rename mutate mutate_if everything full_join vars
-#' @importFrom dplyr group_nest
+#' @importFrom dplyr select rename mutate everything full_join vars mutate_if
+#' @importFrom dplyr group_nest bind_cols rename_all recode matches
 #' @importFrom stats p.adjust pairwise.t.test na.omit aov TukeyHSD var sd
 #' @importFrom WRS2 lincon rmmcp
 #' @importFrom tidyr gather spread separate unnest nest
 #' @importFrom rlang !! enquo as_string ensym
-#' @importFrom tibble as_tibble rowid_to_column enframe
 #' @importFrom jmv anovaNP anovaRMNP
 #' @importFrom forcats fct_relabel
-#' @importFrom purrr map
+#' @importFrom purrr map map2 map_dfr
+#' @importFrom broomExtra tidy
+#' @importFrom ipmisc stats_type_switch
+#' @importFrom tidyBF bf_ttest
 #'
 #' @examples
 #'
@@ -81,7 +82,7 @@
 #'   type = "parametric",
 #'   var.equal = TRUE,
 #'   paired = FALSE,
-#'   p.adjust.method = "bonferroni"
+#'   p.adjust.method = "none"
 #' )
 #'
 #' # if `var.equal = FALSE`, then Games-Howell test will be run
@@ -113,6 +114,15 @@
 #'   type = "robust",
 #'   paired = FALSE,
 #'   p.adjust.method = "fdr"
+#' )
+#'
+#' # Bayes Factor
+#' pairwise_comparisons(
+#'   data = ggplot2::msleep,
+#'   x = vore,
+#'   y = brainwt,
+#'   type = "bayes",
+#'   paired = FALSE
 #' )
 #'
 #' #------------------- within-subjects design ----------------------------
@@ -149,6 +159,16 @@
 #'   paired = TRUE,
 #'   p.adjust.method = "hommel"
 #' )
+#'
+#' # Bayes Factor
+#' pairwise_comparisons(
+#'   data = bugs_long,
+#'   x = condition,
+#'   y = desire,
+#'   type = "bayes",
+#'   paired = TRUE,
+#'   bf.prior = 0.80
+#' )
 #' }
 #' @export
 
@@ -157,12 +177,15 @@ pairwise_comparisons <- function(data,
                                  x,
                                  y,
                                  type = "parametric",
-                                 tr = 0.1,
                                  paired = FALSE,
                                  var.equal = FALSE,
+                                 tr = 0.1,
+                                 bf.prior = 0.707,
                                  p.adjust.method = "holm",
                                  k = 2,
                                  ...) {
+  # standardize stats type
+  type <- ipmisc::stats_type_switch(type)
 
   # ensure the arguments work quoted or unquoted
   x <- rlang::ensym(x)
@@ -174,11 +197,11 @@ pairwise_comparisons <- function(data,
   data %<>%
     dplyr::select(.data = ., {{ x }}, {{ y }}) %>%
     dplyr::mutate(.data = ., {{ x }} := droplevels(as.factor({{ x }}))) %>%
-    tibble::as_tibble(.)
+    as_tibble(.)
 
   # ---------------------------- parametric ---------------------------------
 
-  if (type %in% c("parametric", "p")) {
+  if (type %in% c("parametric", "bayes")) {
     if (isTRUE(var.equal) || isTRUE(paired)) {
       # anova model
       aovmodel <- stats::aov(
@@ -203,7 +226,7 @@ pairwise_comparisons <- function(data,
       # extracting and cleaning up Tukey's HSD output
       df_tukey <-
         stats::TukeyHSD(x = aovmodel, conf.level = 0.95) %>%
-        ipmisc::tidy(.) %>%
+        broomExtra::tidy(.) %>%
         dplyr::select(.data = ., comparison, estimate) %>%
         tidyr::separate(
           data = .,
@@ -224,7 +247,7 @@ pairwise_comparisons <- function(data,
 
       # tidy dataframe with results from pairwise tests
       df_tidy <-
-        ipmisc::tidy(
+        broomExtra::tidy(
           stats::pairwise.t.test(
             x = data %>% dplyr::pull({{ y }}),
             g = data %>% dplyr::pull({{ x }}),
@@ -249,7 +272,6 @@ pairwise_comparisons <- function(data,
       # test details
       test.details <- "Student's t-test"
     } else {
-
       # dataframe with Games-Howell test results
       df <-
         games_howell(data = data, x = {{ x }}, y = {{ y }}) %>%
@@ -263,7 +285,7 @@ pairwise_comparisons <- function(data,
 
   # ---------------------------- nonparametric ----------------------------
 
-  if (type %in% c("nonparametric", "np")) {
+  if (type == "nonparametric") {
     if (isFALSE(paired)) {
       # running Dwass-Steel-Crichtlow-Fligner test using `jmv` package
       jmv_pairs <-
@@ -275,16 +297,7 @@ pairwise_comparisons <- function(data,
         )
 
       # extracting the pairwise tests and formatting the output
-      df <-
-        as.data.frame(jmv_pairs$comparisons[[1]]) %>%
-        tibble::as_tibble(.) %>%
-        dplyr::rename(
-          .data = .,
-          group1 = p1,
-          group2 = p2,
-          p.value = p
-        ) %>%
-        p_adjust_column_adder(df = ., p.adjust.method = p.adjust.method)
+      df <- as.data.frame(jmv_pairs$comparisons[[1]])
 
       # test details
       test.details <- "Dwass-Steel-Crichtlow-Fligner test"
@@ -303,27 +316,32 @@ pairwise_comparisons <- function(data,
         )
 
       # extracting the pairwise tests and formatting the output
-      df <-
-        as.data.frame(jmv_pairs$comp) %>%
-        tibble::as_tibble(.) %>%
-        dplyr::select(.data = ., -sep) %>%
-        dplyr::rename(
-          .data = .,
-          group1 = i1,
-          group2 = i2,
-          statistic = stat,
-          p.value = p
-        ) %>%
-        p_adjust_column_adder(df = ., p.adjust.method = p.adjust.method)
+      df <- as.data.frame(jmv_pairs$comp)
 
       # test details
       test.details <- "Durbin-Conover test"
     }
+
+    # cleanup
+    df %<>%
+      as_tibble(.) %>%
+      dplyr::select(.data = ., -dplyr::matches("sep")) %>%
+      dplyr::rename_all(
+        .tbl = .,
+        .funs = dplyr::recode,
+        "p1" = "group1",
+        "p2" = "group2",
+        "i1" = "group1",
+        "i2" = "group2",
+        "stat" = "statistic",
+        "p" = "p.value"
+      ) %>%
+      p_adjust_column_adder(df = ., p.adjust.method = p.adjust.method)
   }
 
   # ---------------------------- robust ----------------------------------
 
-  if (type %in% c("robust", "r")) {
+  if (type == "robust") {
     if (isFALSE(paired)) {
       # object with all details about pairwise comparisons
       rob_pairwise_df <-
@@ -351,10 +369,7 @@ pairwise_comparisons <- function(data,
 
     # extracting the robust pairwise comparisons and tidying up names
     rob_df_tidy <-
-      suppressMessages(tibble::as_tibble(
-        x = rob_pairwise_df$comp,
-        .name_repair = "unique"
-      )) %>%
+      suppressMessages(as_tibble(rob_pairwise_df$comp, .name_repair = "unique")) %>%
       dplyr::rename(
         .data = .,
         group1 = Group...1,
@@ -374,7 +389,7 @@ pairwise_comparisons <- function(data,
             group1:group2
           ),
         # dataframe with factor levels
-        y = tibble::enframe(x = rob_pairwise_df$fnames, name = "rowid"),
+        y = enframe(x = rob_pairwise_df$fnames, name = "rowid"),
         by = "rowid"
       ) %>%
       dplyr::select(.data = ., -rowid) %>%
@@ -394,13 +409,70 @@ pairwise_comparisons <- function(data,
   # ---------------------------- bayes factor --------------------------------
 
   # print a message telling the user that this is currently not supported
-  if (type %in% c("bf", "bayes")) {
-    stop(message("No pairwise comparisons currently available.\n"), call. = FALSE)
+  if (type == "bayes") {
+    # convert groups to character type
+    df %<>%
+      dplyr::mutate_if(
+        .tbl = .,
+        .predicate = is.factor,
+        .funs = ~ as.character(.)
+      )
+
+    # creating a list of dataframes with subsections of data
+    df_list <-
+      purrr::map2(
+        .x = as.character(df$group2),
+        .y = as.character(df$group1),
+        .f = function(a, b) {
+          data %>%
+            dplyr::filter(.data = ., !is.na({{ x }}), !is.na({{ y }})) %>%
+            dplyr::filter(.data = ., {{ x }} %in% c(a, b)) %>%
+            droplevels() %>%
+            as.data.frame()
+        }
+      )
+
+    # combining results into a single dataframe and returning it
+    df_tidy <-
+      df_list %>%
+      purrr::map_dfr(
+        .x = .,
+        .f = ~ tidyBF::bf_ttest(
+          data = .,
+          x = {{ x }},
+          y = {{ y }},
+          paired = paired,
+          bf.prior = bf.prior,
+          output = "results"
+        )
+      ) %>%
+      dplyr::mutate(.data = ., rowid = dplyr::row_number()) %>%
+      dplyr::group_nest(.tbl = ., rowid) %>%
+      dplyr::mutate(
+        .data = .,
+        label = data %>%
+          purrr::map(
+            .x = .,
+            .f = ~ paste(
+              "list(~log[e](BF[10])",
+              "==",
+              specify_decimal_p(x = .$log_e_bf10, k = k),
+              ")",
+              sep = ""
+            )
+          )
+      ) %>% # unnesting the dataframe
+      tidyr::unnest(data = ., cols = c(data, label)) %>%
+      dplyr::select(.data = ., -rowid) %>%
+      dplyr::mutate(.data = ., test.details = "Student's t-test")
+
+    # early return (no further cleanup required)
+    return(dplyr::bind_cols(dplyr::select(df, group1, group2), df_tidy))
   }
 
   # ---------------------------- cleanup ----------------------------------
 
-  # if there are factors, covert them to character to make life easy
+  # final cleanup for p-value labels
   df %<>%
     dplyr::mutate_if(
       .tbl = .,
@@ -440,24 +512,9 @@ pairwise_comparisons <- function(data,
     )
 
   # return
-  return(tibble::as_tibble(df))
+  return(as_tibble(df))
 }
 
-
-#' @noRd
-#'
-#' @importFrom rlang :=
-#'
-#' @keywords internal
-
-df_cleanup_paired <- function(data, x, y) {
-  data %<>%
-    long_to_wide_converter(data = ., x = {{ x }}, y = {{ y }}) %>%
-    tidyr::gather(data = ., key, value, -rowid) %>%
-    dplyr::arrange(.data = ., rowid) %>%
-    dplyr::rename(.data = ., {{ x }} := key, {{ y }} := value) %>%
-    dplyr::mutate(.data = ., {{ x }} := factor({{ x }}))
-}
 
 #' @name pairwise_comparisons
 #' @aliases  pairwise_comparisons
