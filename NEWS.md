@@ -1,3 +1,9 @@
+# pairwiseComparisons 0.3.1
+
+  - Adapts to breaking changes in upcoming release of `broom 0.7.0`.
+  
+  - Thanks to Sarah, the package has a hexsticker. :)
+
 # pairwiseComparisons 0.3.0
 
   - Due to changes made to downstream dependencies, the minimum R version
