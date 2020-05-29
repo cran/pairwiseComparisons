@@ -70,7 +70,7 @@ comparisons. Possible methods are: \code{"holm"} (default), \code{"hochberg"},
 \code{"hommel"}, \code{"bonferroni"}, \code{"BH"}, \code{"BY"}, \code{"fdr"}, \code{"none"}.}
 
 \item{k}{Number of digits after decimal point (should be an integer)
-(Default: \code{k = 2}).}
+(Default: \code{k = 2L}).}
 
 \item{...}{Current ignored.}
 }
@@ -99,22 +99,18 @@ comparisons between group levels with corrections for multiple testing.
 \examples{
 
 \donttest{
-# show all columns in a tibble
-options(tibble.width = Inf)
+# for reproducibility
+set.seed(123)
+library(pairwiseComparisons)
 
 #------------------- between-subjects design ----------------------------
 
-# for reproducibility
-set.seed(123)
-
-library(pairwiseComparisons)
-
 # parametric
-# if `var.equal = TRUE`, then Student's *t*-test will be run
+# if `var.equal = TRUE`, then Student's t-test will be run
 pairwise_comparisons(
-  data = ggplot2::msleep,
-  x = vore,
-  y = brainwt,
+  data = mtcars,
+  x = cyl,
+  y = wt,
   type = "parametric",
   var.equal = TRUE,
   paired = FALSE,
@@ -123,50 +119,47 @@ pairwise_comparisons(
 
 # if `var.equal = FALSE`, then Games-Howell test will be run
 pairwise_comparisons(
-  data = ggplot2::msleep,
-  x = vore,
-  y = brainwt,
+  data = mtcars,
+  x = cyl,
+  y = wt,
   type = "parametric",
   var.equal = FALSE,
   paired = FALSE,
   p.adjust.method = "bonferroni"
 )
 
-# non-parametric
+# non-parametric (Dunn test)
 pairwise_comparisons(
-  data = ggplot2::msleep,
-  x = vore,
-  y = brainwt,
+  data = mtcars,
+  x = cyl,
+  y = wt,
   type = "nonparametric",
   paired = FALSE,
   p.adjust.method = "none"
 )
 
-# robust
+# robust (Yuen's trimmed means t-test)
 pairwise_comparisons(
-  data = ggplot2::msleep,
-  x = vore,
-  y = brainwt,
+  data = mtcars,
+  x = cyl,
+  y = wt,
   type = "robust",
   paired = FALSE,
   p.adjust.method = "fdr"
 )
 
-# Bayes Factor
+# Bayes Factor (Student's t-test)
 pairwise_comparisons(
-  data = ggplot2::msleep,
-  x = vore,
-  y = brainwt,
+  data = mtcars,
+  x = cyl,
+  y = wt,
   type = "bayes",
   paired = FALSE
 )
 
 #------------------- within-subjects design ----------------------------
 
-# for reproducibility
-set.seed(123)
-
-# parametric
+# parametric (Student's t-test)
 pairwise_comparisons(
   data = bugs_long,
   x = condition,
@@ -176,7 +169,7 @@ pairwise_comparisons(
   p.adjust.method = "BH"
 )
 
-# non-parametric
+# non-parametric (Durbin-Conover test)
 pairwise_comparisons(
   data = bugs_long,
   x = condition,
@@ -186,7 +179,7 @@ pairwise_comparisons(
   p.adjust.method = "BY"
 )
 
-# robust
+# robust (Yuen's trimmed means t-test)
 pairwise_comparisons(
   data = bugs_long,
   x = condition,
@@ -196,7 +189,7 @@ pairwise_comparisons(
   p.adjust.method = "hommel"
 )
 
-# Bayes Factor
+# Bayes Factor (Student's t-test)
 pairwise_comparisons(
   data = bugs_long,
   x = condition,
