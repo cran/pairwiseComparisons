@@ -62,32 +62,19 @@ testthat::test_that(
 
     # adjustment method
     testthat::expect_identical(unique(df1$p.value.adjustment), "Bonferroni")
-    testthat::expect_identical(unique(df2$p.value.adjustment), "Benjamini & Yekutieli")
+    testthat::expect_identical(unique(df2$p.value.adjustment), "BY")
     testthat::expect_identical(unique(df3$p.value.adjustment), "Hommel")
 
     # checking exact values
-    testthat::expect_equal(
-      df1$mean.difference,
-      c(
-        -1.14772727272727,
-        -0.471590909090914,
-        -2.16477272727272,
-        0.676136363636358,
-        -1.01704545454545,
-        -1.69318181818181
-      ),
-      tolerance = 0.001
-    )
-
     testthat::expect_identical(
       df1$label,
       c(
-        "list(~italic(p)[adjusted]==0.003)",
-        "list(~italic(p)[adjusted]==0.421)",
-        "list(~italic(p)[adjusted]<=0.001)",
-        "list(~italic(p)[adjusted]==0.337)",
-        "list(~italic(p)[adjusted]==0.008)",
-        "list(~italic(p)[adjusted]<=0.001)"
+        "list(~italic(p)[Bonferroni-corrected]==0.003)",
+        "list(~italic(p)[Bonferroni-corrected]==0.421)",
+        "list(~italic(p)[Bonferroni-corrected]==3.95e-12)",
+        "list(~italic(p)[Bonferroni-corrected]==0.337)",
+        "list(~italic(p)[Bonferroni-corrected]==0.008)",
+        "list(~italic(p)[Bonferroni-corrected]==1.33e-08)"
       )
     )
 
@@ -97,7 +84,7 @@ testthat::test_that(
     )
 
     testthat::expect_equal(
-      df2$W,
+      df2$statistic,
       c(
         4.78004208516409,
         2.44393129166284,
@@ -112,12 +99,12 @@ testthat::test_that(
     testthat::expect_identical(
       df2$label,
       c(
-        "list(~italic(p)[adjusted]<=0.001)",
-        "list(~italic(p)[adjusted]==0.045)",
-        "list(~italic(p)[adjusted]<=0.001)",
-        "list(~italic(p)[adjusted]==0.050)",
-        "list(~italic(p)[adjusted]==0.005)",
-        "list(~italic(p)[adjusted]<=0.001)"
+        "list(~italic(p)[BY-corrected]==1.44e-05)",
+        "list(~italic(p)[BY-corrected]==0.045)",
+        "list(~italic(p)[BY-corrected]==5.45e-13)",
+        "list(~italic(p)[BY-corrected]==0.050)",
+        "list(~italic(p)[BY-corrected]==0.005)",
+        "list(~italic(p)[BY-corrected]==4.64e-07)"
       )
     )
 
@@ -127,7 +114,7 @@ testthat::test_that(
     )
 
     testthat::expect_equal(
-      df3$psihat,
+      df3$estimate,
       c(
         1.15972222222222,
         0.5,
@@ -142,12 +129,12 @@ testthat::test_that(
     testthat::expect_identical(
       df3$label,
       c(
-        "list(~italic(p)[adjusted]==0.001)",
-        "list(~italic(p)[adjusted]==0.062)",
-        "list(~italic(p)[adjusted]<=0.001)",
-        "list(~italic(p)[adjusted]==0.062)",
-        "list(~italic(p)[adjusted]==0.014)",
-        "list(~italic(p)[adjusted]<=0.001)"
+        "list(~italic(p)[Hommel-corrected]==0.001)",
+        "list(~italic(p)[Hommel-corrected]==0.062)",
+        "list(~italic(p)[Hommel-corrected]==1.79e-10)",
+        "list(~italic(p)[Hommel-corrected]==0.062)",
+        "list(~italic(p)[Hommel-corrected]==0.014)",
+        "list(~italic(p)[Hommel-corrected]==1.16e-06)"
       )
     )
 
@@ -181,6 +168,12 @@ testthat::test_that(
     testthat::expect_identical(df1$group2, df2$group2)
     testthat::expect_identical(df1$group2, df3$group2)
     testthat::expect_identical(df1$group2, df4$group2)
+
+    # column names
+    testthat::expect_identical(names(df1)[1:2], c("group1", "group2"))
+    testthat::expect_identical(names(df2)[1:2], c("group1", "group2"))
+    testthat::expect_identical(names(df3)[1:2], c("group1", "group2"))
+    testthat::expect_identical(names(df4)[1:2], c("group1", "group2"))
   }
 )
 
@@ -254,22 +247,12 @@ testthat::test_that(
     testthat::expect_identical(unique(df3$p.value.adjustment), "None")
 
     # checking exact values
-    testthat::expect_equal(
-      df1$mean.difference,
-      c(
-        -0.00909090909090882,
-        -0.084090909090909,
-        -0.0750000000000002
-      ),
-      tolerance = 0.001
-    )
-
     testthat::expect_identical(
       df1$label,
       c(
-        "list(~italic(p)[unadjusted]==0.732)",
-        "list(~italic(p)[unadjusted]==0.014)",
-        "list(~italic(p)[unadjusted]==0.001)"
+        "list(~italic(p)[uncorrected]==0.732)",
+        "list(~italic(p)[uncorrected]==0.014)",
+        "list(~italic(p)[uncorrected]==0.001)"
       )
     )
 
@@ -279,7 +262,7 @@ testthat::test_that(
     )
 
     testthat::expect_equal(
-      df2$W,
+      df2$statistic,
       c(1.04673405118638, 3.66356917915232, 2.61683512796594),
       tolerance = 0.001
     )
@@ -287,9 +270,9 @@ testthat::test_that(
     testthat::expect_identical(
       df2$label,
       c(
-        "list(~italic(p)[unadjusted]==0.301)",
-        "list(~italic(p)[unadjusted]==0.001)",
-        "list(~italic(p)[unadjusted]==0.012)"
+        "list(~italic(p)[uncorrected]==0.301)",
+        "list(~italic(p)[uncorrected]==0.001)",
+        "list(~italic(p)[uncorrected]==0.012)"
       )
     )
 
@@ -299,7 +282,7 @@ testthat::test_that(
     )
 
     testthat::expect_equal(
-      df3$psihat,
+      df3$estimate,
       c(0.0166666666666668, 0.1, 0.0777777777777778),
       tolerance = 0.001
     )
@@ -307,9 +290,9 @@ testthat::test_that(
     testthat::expect_identical(
       df3$label,
       c(
-        "list(~italic(p)[unadjusted]==0.380)",
-        "list(~italic(p)[unadjusted]==0.011)",
-        "list(~italic(p)[unadjusted]==0.003)"
+        "list(~italic(p)[uncorrected]==0.380)",
+        "list(~italic(p)[uncorrected]==0.011)",
+        "list(~italic(p)[uncorrected]==0.003)"
       )
     )
 

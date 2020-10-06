@@ -1,3 +1,16 @@
+# pairwiseComparisons 3.0.0
+
+  - The `label` column returned in `pairwise_comparisons` now displays the
+    p-value adjustment method in the label itself.
+
+  - `pairwise_caption` function has changed its output to reflect changes made
+    to the *p*-value labels.
+    
+  - Major internal refactoring to get rid of the following dependencies:
+    `broomExtra`, `dunn.test`, `forcats`, and `tidyr`. This comes at the cost of
+    omission of few of the details that were previously included in the output
+    (e.g., `mean.difference` column for Student's *t*-test).
+
 # pairwiseComparisons 2.0.1
 
   - Hotfix release to fix failing tests due to release of `tidyBF 0.3.0`.
@@ -10,7 +23,6 @@
   - This fix also now makes the results more consistent, such that irrespective
     of which type of statistics is chosen the `group1` and `group2` columns are
     in identical order.
-
 
 # pairwiseComparisons 1.1.2
 

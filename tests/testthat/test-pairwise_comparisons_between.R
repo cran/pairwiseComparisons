@@ -166,11 +166,9 @@ testthat::test_that(
     df_msleep <- msleep
 
     # adding empty factor level (shouldn't change results)
-    df_msleep %<>%
-      dplyr::mutate(
-        vore = as.factor(vore),
-        vore = forcats::fct_expand(vore, "random")
-      )
+    df_msleep %<>% dplyr::mutate(vore = as.factor(vore))
+
+    df_msleep$vore <- factor(df_msleep$vore, levels = c(levels(df_msleep$vore), "Random"))
 
     df2 <-
       pairwiseComparisons::pairwise_comparisons(
@@ -245,31 +243,25 @@ testthat::test_that(
     testthat::expect_identical(unique(df1$p.value.adjustment), "Bonferroni")
     testthat::expect_identical(unique(df2$p.value.adjustment), "Bonferroni")
     testthat::expect_identical(unique(df3$p.value.adjustment), "None")
-    testthat::expect_identical(unique(df4$p.value.adjustment), "Benjamini & Hochberg")
+    testthat::expect_identical(unique(df4$p.value.adjustment), "FDR")
     testthat::expect_identical(unique(df5$p.value.adjustment), "Holm")
 
     # testing exact values
     testthat::expect_equal(
-      df1$mean.difference,
+      df2$statistic,
       c(
-        0.54234194,
-        -0.05770556,
-        0.06647562,
-        -0.60004750,
-        -0.47586632,
-        0.12418118
+        2.17169043717625,
+        -2.16913303477938,
+        1.09507690266434,
+        -2.41175676610363,
+        -1.86823811633304,
+        2.18822208033862
       ),
       tolerance = 0.001
     )
 
     testthat::expect_equal(
-      df2$mean.difference,
-      c(0.542, -0.058, 0.066, -0.6, -0.476, 0.124),
-      tolerance = 0.001
-    )
-
-    testthat::expect_equal(
-      df3$z.value,
+      df3$statistic,
       c(
         0.581939863708611,
         1.88416265861034,
@@ -282,7 +274,7 @@ testthat::test_that(
     )
 
     testthat::expect_equal(
-      df4$psihat,
+      df4$estimate,
       c(
         -0.0529663194444444,
         0.0577055555555556,
@@ -304,10 +296,6 @@ testthat::test_that(
     )
     testthat::expect_equal(df5$group1, c("PG", "PG", "PG-13"))
     testthat::expect_equal(df5$group2, c("PG-13", "R", "R"))
-    testthat::expect_equal(df5$mean.difference,
-      c(0.1042746, 0.3234094, 0.2191348),
-      tolerance = 0.001
-    )
     testthat::expect_equal(df5$p.value,
       c(0.315931518, 0.002825407, 0.003100279),
       tolerance = 0.001
@@ -317,48 +305,57 @@ testthat::test_that(
     testthat::expect_identical(
       df1$label,
       c(
-        "list(~italic(p)[adjusted]==1.000)",
-        "list(~italic(p)[adjusted]==1.000)",
-        "list(~italic(p)[adjusted]==1.000)",
-        "list(~italic(p)[adjusted]==1.000)",
-        "list(~italic(p)[adjusted]==0.979)",
-        "list(~italic(p)[adjusted]==1.000)"
+        "list(~italic(p)[Bonferroni-corrected]==1.000)",
+        "list(~italic(p)[Bonferroni-corrected]==1.000)",
+        "list(~italic(p)[Bonferroni-corrected]==1.000)",
+        "list(~italic(p)[Bonferroni-corrected]==1.000)",
+        "list(~italic(p)[Bonferroni-corrected]==0.979)",
+        "list(~italic(p)[Bonferroni-corrected]==1.000)"
       )
     )
 
     testthat::expect_identical(
       df2$label,
       c(
-        "list(~italic(p)[adjusted]==1.000)",
-        "list(~italic(p)[adjusted]==1.000)",
-        "list(~italic(p)[adjusted]==1.000)",
-        "list(~italic(p)[adjusted]==1.000)",
-        "list(~italic(p)[adjusted]==1.000)",
-        "list(~italic(p)[adjusted]==1.000)"
+        "list(~italic(p)[Bonferroni-corrected]==1.000)",
+        "list(~italic(p)[Bonferroni-corrected]==1.000)",
+        "list(~italic(p)[Bonferroni-corrected]==1.000)",
+        "list(~italic(p)[Bonferroni-corrected]==1.000)",
+        "list(~italic(p)[Bonferroni-corrected]==1.000)",
+        "list(~italic(p)[Bonferroni-corrected]==1.000)"
       )
     )
 
     testthat::expect_identical(
       df3$label,
       c(
-        "list(~italic(p)[unadjusted]==0.561)",
-        "list(~italic(p)[unadjusted]==0.060)",
-        "list(~italic(p)[unadjusted]==0.254)",
-        "list(~italic(p)[unadjusted]==0.102)",
-        "list(~italic(p)[unadjusted]==0.474)",
-        "list(~italic(p)[unadjusted]==0.254)"
+        "list(~italic(p)[uncorrected]==0.561)",
+        "list(~italic(p)[uncorrected]==0.060)",
+        "list(~italic(p)[uncorrected]==0.254)",
+        "list(~italic(p)[uncorrected]==0.102)",
+        "list(~italic(p)[uncorrected]==0.474)",
+        "list(~italic(p)[uncorrected]==0.254)"
       )
     )
 
     testthat::expect_identical(
       df4$label,
       c(
-        "list(~italic(p)[adjusted]==0.969)",
-        "list(~italic(p)[adjusted]==0.969)",
-        "list(~italic(p)[adjusted]==0.969)",
-        "list(~italic(p)[adjusted]==0.969)",
-        "list(~italic(p)[adjusted]==0.969)",
-        "list(~italic(p)[adjusted]==0.969)"
+        "list(~italic(p)[FDR-corrected]==0.969)",
+        "list(~italic(p)[FDR-corrected]==0.969)",
+        "list(~italic(p)[FDR-corrected]==0.969)",
+        "list(~italic(p)[FDR-corrected]==0.969)",
+        "list(~italic(p)[FDR-corrected]==0.969)",
+        "list(~italic(p)[FDR-corrected]==0.969)"
+      )
+    )
+
+    testthat::expect_identical(
+      df5$label,
+      c(
+        "list(~italic(p)[Holm-corrected]==0.316)",
+        "list(~italic(p)[Holm-corrected]==0.003)",
+        "list(~italic(p)[Holm-corrected]==0.003)"
       )
     )
 
@@ -390,6 +387,14 @@ testthat::test_that(
     testthat::expect_identical(df1$group2, df3$group2)
     testthat::expect_identical(df1$group2, df4$group2)
     testthat::expect_identical(df1$group2, df6$group2)
+
+    # column names
+    testthat::expect_identical(names(df1)[1:2], c("group1", "group2"))
+    testthat::expect_identical(names(df2)[1:2], c("group1", "group2"))
+    testthat::expect_identical(names(df3)[1:2], c("group1", "group2"))
+    testthat::expect_identical(names(df4)[1:2], c("group1", "group2"))
+    testthat::expect_identical(names(df5)[1:2], c("group1", "group2"))
+    testthat::expect_identical(names(df6)[1:2], c("group1", "group2"))
   }
 )
 
@@ -422,31 +427,34 @@ testthat::test_that(
       dplyr::filter(.data = ., group2 == "omni", group1 == "carni")
 
     # tests
-    testthat::expect_equal(df1$mean.difference, df2$mean.difference, tolerance = 0.01)
-    testthat::expect_equal(df1$se, df2$se, tolerance = 0.01)
-    testthat::expect_equal(df1$t.value, df2$t.value, tolerance = 0.01)
-    testthat::expect_equal(df1$df, df2$df, tolerance = 0.01)
-    testthat::expect_identical(df2$label, "list(~italic(p)[unadjusted]==0.865)")
+    testthat::expect_equal(df1$statistic, df2$statistic, tolerance = 0.01)
+    testthat::expect_identical(df2$label, "list(~italic(p)[uncorrected]==0.865)")
   }
 )
 
-# irregular names --------------------------------------------------
+# data without NAs --------------------------------------------------
 
 testthat::test_that(
-  desc = "check if everything works fine with irregular factor level names",
+  desc = "data without NAs",
   code = {
     set.seed(123)
-
     df <-
       pairwiseComparisons::pairwise_comparisons(
-        data = movies_wide,
-        x = mpaa,
-        y = rating,
+        data = iris,
+        x = Species,
+        y = Sepal.Length,
         type = "p",
+        p.adjust.method = "fdr",
         var.equal = TRUE
       )
 
-    testthat::expect_equal(df$group1, c("PG", "PG", "PG-13"))
-    testthat::expect_equal(df$group2, c("PG-13", "R", "R"))
+    testthat::expect_equal(
+      df$label,
+      c(
+        "list(~italic(p)[FDR-corrected]==1.32e-15)",
+        "list(~italic(p)[FDR-corrected]==6.64e-32)",
+        "list(~italic(p)[FDR-corrected]==2.77e-09)"
+      )
+    )
   }
 )
