@@ -1,3 +1,11 @@
+# pairwiseComparisons 3.1.0
+
+  - To be consistent with the rest of the `ggstatsverse`, the Bayes Factor
+    results are now always shown in favor of null over alternative (`BF01`).
+    
+  - `pairwise_comparisons` function gets `subject.id` argument relevant for
+    repeated measures design.
+
 # pairwiseComparisons 3.0.0
 
   - The `label` column returned in `pairwise_comparisons` now displays the

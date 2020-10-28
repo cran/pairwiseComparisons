@@ -146,12 +146,12 @@ testthat::test_that(
     testthat::expect_identical(
       df4$label,
       c(
-        "list(~log[e](BF[10])==3.7273)",
-        "list(~log[e](BF[10])==-0.5394)",
-        "list(~log[e](BF[10])==23.2071)",
-        "list(~log[e](BF[10])==-0.3589)",
-        "list(~log[e](BF[10])==2.8966)",
-        "list(~log[e](BF[10])==15.3854)"
+        "list(~log[e](BF['01'])==-3.7273)",
+        "list(~log[e](BF['01'])==0.5394)",
+        "list(~log[e](BF['01'])==-23.2071)",
+        "list(~log[e](BF['01'])==0.3589)",
+        "list(~log[e](BF['01'])==-2.8966)",
+        "list(~log[e](BF['01'])==-15.3854)"
       )
     )
 
@@ -304,9 +304,9 @@ testthat::test_that(
     testthat::expect_identical(
       df4$label,
       c(
-        "list(~log[e](BF[10])==-1.4462)",
-        "list(~log[e](BF[10])==1.3122)",
-        "list(~log[e](BF[10])==3.9214)"
+        "list(~log[e](BF['01'])==1.4462)",
+        "list(~log[e](BF['01'])==-1.3122)",
+        "list(~log[e](BF['01'])==-3.9214)"
       )
     )
 
@@ -317,5 +317,95 @@ testthat::test_that(
     testthat::expect_identical(df1$group2, df2$group2)
     testthat::expect_identical(df1$group2, df3$group2)
     testthat::expect_identical(df1$group2, df4$group2)
+  }
+)
+
+# works with subject id ------------------------------------------------------
+
+testthat::test_that(
+  desc = "works with subject id",
+  code = {
+    testthat::skip_if(getRversion() < "3.6")
+
+    set.seed(123)
+    df1 <-
+      dplyr::bind_rows(
+        pairwiseComparisons::pairwise_comparisons(
+          data = WRS2::WineTasting,
+          x = Wine,
+          y = "Taste",
+          type = "p",
+          k = 3,
+          subject.id = "Taster",
+          paired = TRUE
+        ),
+        pairwiseComparisons::pairwise_comparisons(
+          data = WRS2::WineTasting,
+          x = Wine,
+          y = "Taste",
+          type = "np",
+          k = 3,
+          subject.id = "Taster",
+          paired = TRUE
+        ),
+        pairwiseComparisons::pairwise_comparisons(
+          data = WRS2::WineTasting,
+          x = Wine,
+          y = "Taste",
+          type = "r",
+          k = 3,
+          subject.id = "Taster",
+          paired = TRUE
+        ),
+        pairwiseComparisons::pairwise_comparisons(
+          data = WRS2::WineTasting,
+          x = Wine,
+          y = "Taste",
+          type = "bf",
+          k = 3,
+          subject.id = "Taster",
+          paired = TRUE
+        )
+      )
+
+    set.seed(123)
+    df2 <-
+      dplyr::bind_rows(
+        pairwiseComparisons::pairwise_comparisons(
+          data = dplyr::arrange(WRS2::WineTasting, Taster),
+          x = Wine,
+          y = "Taste",
+          type = "p",
+          k = 3,
+          paired = TRUE
+        ),
+        pairwiseComparisons::pairwise_comparisons(
+          data = dplyr::arrange(WRS2::WineTasting, Taster),
+          x = Wine,
+          y = "Taste",
+          type = "np",
+          k = 3,
+          paired = TRUE
+        ),
+        pairwiseComparisons::pairwise_comparisons(
+          data = dplyr::arrange(WRS2::WineTasting, Taster),
+          x = Wine,
+          y = "Taste",
+          type = "r",
+          k = 3,
+          paired = TRUE
+        ),
+        pairwiseComparisons::pairwise_comparisons(
+          data = dplyr::arrange(WRS2::WineTasting, Taster),
+          x = Wine,
+          y = "Taste",
+          type = "bf",
+          k = 3,
+          paired = TRUE
+        )
+      )
+
+    # columns should be same no matter the test
+    testthat::expect_equal(as.data.frame(df1), as.data.frame(df2))
   }
 )
