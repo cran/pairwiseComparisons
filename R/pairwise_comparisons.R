@@ -1,8 +1,12 @@
 #' @title Multiple pairwise comparison tests with tidy data
 #' @name pairwise_comparisons
-#' @description Calculate parametric, non-parametric, robust, and Bayes Factor
-#'   pairwise comparisons between group levels with corrections for multiple
-#'   testing.
+#'
+#' @description
+#'
+#' \Sexpr[results=rd, stage=render]{rlang:::lifecycle("maturing")}
+#'
+#' Calculate parametric, non-parametric, robust, and Bayes Factor pairwise
+#' comparisons between group levels with corrections for multiple testing.
 #'
 #' @param data A dataframe from which variables specified are to be taken. A
 #'   matrix or tables will **not** be accepted.
@@ -60,9 +64,10 @@
 #' @importFrom stats p.adjust pairwise.t.test na.omit aov
 #' @importFrom WRS2 lincon rmmcp
 #' @importFrom PMCMRplus durbinAllPairsTest kwAllPairsDunnTest gamesHowellTest
-#' @importFrom rlang !! enquo as_string ensym
+#' @importFrom rlang !!! ensym exec
 #' @importFrom purrr map2 map_dfr
-#' @importFrom ipmisc stats_type_switch specify_decimal_p long_to_wide_converter
+#' @importFrom ipmisc stats_type_switch format_num long_to_wide_converter
+#' @importFrom insight standardize_names
 #'
 #' @examples
 #'
@@ -198,7 +203,7 @@ pairwise_comparisons <- function(data,
 
   # creating a dataframe (it's important for the data to be sorted by `x`)
   df_int <-
-    long_to_wide_converter(
+    ipmisc::long_to_wide_converter(
       data = data,
       x = {{ x }},
       y = {{ y }},
@@ -211,46 +216,55 @@ pairwise_comparisons <- function(data,
   x_vec <- df_int %>% dplyr::pull({{ x }})
   y_vec <- df_int %>% dplyr::pull({{ y }})
   g_vec <- df_int$rowid
+  .f.args <- list()
+
+  # ---------------------------- parametric ---------------------------------
+
+  if (type %in% c("parametric", "bayes")) {
+    if (isTRUE(var.equal) || isTRUE(paired)) {
+      c(.f, test.details) %<-% c(stats::pairwise.t.test, "Student's t-test")
+    } else {
+      c(.f, test.details) %<-% c(PMCMRplus::gamesHowellTest, "Games-Howell test")
+    }
+  }
 
   # ---------------------------- nonparametric ----------------------------
 
   if (type == "nonparametric") {
-    # # running Dunn test
-    if (isFALSE(paired)) {
-      mod <-
-        suppressWarnings(PMCMRplus::kwAllPairsDunnTest(
-          x = y_vec,
-          g = x_vec,
-          na.action = na.omit,
-          p.adjust.method = "none"
-        ))
+    if (isFALSE(paired)) c(.f, test.details) %<-% c(PMCMRplus::kwAllPairsDunnTest, "Dunn test")
+    if (isTRUE(paired)) c(.f, test.details) %<-% c(PMCMRplus::durbinAllPairsTest, "Durbin-Conover test")
 
-      # test details
-      test.details <- "Dunn test"
-    }
+    # `exec` fails otherwise for `pairwise.t.test` because `y` is passed to `t.test`
+    .f.args <- list(y = y_vec)
+  }
 
-    # # running Durbin-Conover test
-    if (isTRUE(paired)) {
-      mod <-
-        PMCMRplus::durbinAllPairsTest(
-          y = y_vec,
-          groups = x_vec,
-          blocks = g_vec,
-          p.adjust.method = "none"
-        )
-
-      # test details
-      test.details <- "Durbin-Conover test"
-    }
-
-    # cleanup
-    df <- PMCMR_to_tibble(mod)
+  # running the appropriate test
+  if (type != "robust") {
+    df <-
+      suppressWarnings(rlang::exec(
+        .fn = .f,
+        # Dunn, Games-Howell, Student test
+        x = y_vec,
+        g = x_vec,
+        # Durbin-Conover test
+        groups = x_vec,
+        blocks = g_vec,
+        # Student
+        paired = paired,
+        # common
+        na.action = na.omit,
+        p.adjust.method = "none",
+        # problematic for other methods
+        !!!.f.args
+      )) %>%
+      tidy_model_parameters(.) %>%
+      dplyr::rename(group2 = group1, group1 = group2)
   }
 
   # ---------------------------- robust ----------------------------------
 
+  # extracting the robust pairwise comparisons
   if (type == "robust") {
-    # extracting the robust pairwise comparisons
     if (isFALSE(paired)) {
       mod <-
         WRS2::lincon(
@@ -261,58 +275,18 @@ pairwise_comparisons <- function(data,
     } else {
       mod <-
         WRS2::rmmcp(
-          y = df_int[[rlang::as_name(y)]],
-          groups = df_int[[rlang::as_name(x)]],
-          blocks = df_int[["rowid"]],
+          y = y_vec,
+          groups = x_vec,
+          blocks = g_vec,
           tr = tr
         )
     }
 
     # cleaning the raw object and getting it in the right format
-    df <-
-      suppressMessages(as_tibble(mod$comp, .name_repair = "unique")) %>%
-      dplyr::rename(group1 = Group...1, group2 = Group...2) %>%
-      dplyr::mutate(dplyr::across(
-        .cols = dplyr::starts_with("group"),
-        .fns = ~ as.character(setNames(mod$fnames, seq_along(mod$fnames))[as.character(.)])
-      ))
-
-    # renaming confidence interval names
-    df %<>% dplyr::rename(estimate = psihat, conf.low = ci.lower, conf.high = ci.upper)
+    df <- tidy_model_parameters(mod)
 
     # test details
     test.details <- "Yuen's trimmed means test"
-  }
-
-  # ---------------------------- parametric ---------------------------------
-
-  if (type %in% c("parametric", "bayes")) {
-    if (isTRUE(var.equal) || isTRUE(paired)) {
-      # tidy dataframe with results from pairwise tests
-      df <-
-        stats::pairwise.t.test(
-          x = y_vec,
-          g = x_vec,
-          p.adjust.method = "none",
-          paired = paired,
-          na.action = na.omit
-        ) %>%
-        parameters::model_parameters(.) %>%
-        parameters::standardize_names(data = ., style = "broom") %>%
-        dplyr::rename(group2 = group1, group1 = group2)
-
-      # test details
-      test.details <- "Student's t-test"
-    } else {
-      # anova model
-      aovmodel <- stats::aov(rlang::new_formula(y, x), df_int)
-
-      # dataframe with Games-Howell test results
-      df <- PMCMR_to_tibble(PMCMRplus::gamesHowellTest(aovmodel, p.adjust.method = "none"))
-
-      # test details
-      test.details <- "Games-Howell test"
-    }
   }
 
   # ---------------------------- bayes factor --------------------------------
@@ -328,7 +302,7 @@ pairwise_comparisons <- function(data,
           .f = function(a, b) droplevels(dplyr::filter(df_int, {{ x }} %in% c(a, b)))
         ),
         # internal function to carry out BF t-test
-        .f = ~ bf_internal_ttest(
+        .f = ~ bf_ttest(
           data = .x,
           x = {{ x }},
           y = {{ y }},
@@ -337,9 +311,7 @@ pairwise_comparisons <- function(data,
         )
       ) %>%
       dplyr::rowwise() %>%
-      dplyr::mutate(label = paste0(
-        "list(~log[e](BF['01'])==", specify_decimal_p(-log_e_bf10, k), ")"
-      )) %>%
+      dplyr::mutate(label = paste0("list(~log[e](BF['01'])==", format_num(-log_e_bf10, k), ")")) %>%
       dplyr::ungroup() %>%
       dplyr::mutate(test.details = "Student's t-test")
 
@@ -366,19 +338,20 @@ pairwise_comparisons <- function(data,
       dplyr::rowwise() %>%
       dplyr::mutate(
         label = dplyr::case_when(
-          p.value.adjustment != "None" ~ paste0(
+          p.value.adjustment != "None" ~
+          paste0(
             "list(~italic(p)[",
             p.value.adjustment,
             "-corrected]==",
-            specify_decimal_p(p.value, k, TRUE),
+            format_num(p.value, k, TRUE),
             ")"
           ),
-          TRUE ~ paste0("list(~italic(p)[uncorrected]==", specify_decimal_p(p.value, k, TRUE), ")")
+          TRUE ~ paste0("list(~italic(p)[uncorrected]==", format_num(p.value, k, TRUE), ")")
         )
       ) %>%
       dplyr::ungroup()
   }
 
   # return
-  return(as_tibble(df))
+  as_tibble(df)
 }

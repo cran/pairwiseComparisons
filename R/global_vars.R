@@ -3,16 +3,13 @@
 utils::globalVariables(
   names = c(
     ".",
-    "Group...1",
-    "Group...2",
+    "bayes.factor",
     "bf10",
-    "ci.lower",
-    "ci.upper",
     "group1",
     "group2",
     "log_e_bf10",
     "p.value",
-    "psihat"
+    ".f"
   ),
   package = "pairwiseComparisons",
   add = FALSE

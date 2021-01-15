@@ -1,15 +1,9 @@
-#' @name PMCMR_to_tibble
-#'
-#' @importFrom dplyr contains select rename
-#' @importFrom PMCMRplus toTidy
-#'
-#' @keywords internal
+#' @description Handy shorthand for `model_parameters`
 #' @noRd
 
-# function body
-PMCMR_to_tibble <- function(mod, ...) {
-  dplyr::select(PMCMRplus::toTidy(mod), -dplyr::contains("method")) %>%
-    dplyr::rename(group2 = group1, group1 = group2)
+tidy_model_parameters <- function(model, ...) {
+  parameters::model_parameters(model, verbose = FALSE, ...) %>%
+    parameters::standardize_names(data = ., style = "broom")
 }
 
 #' @importFrom BayesFactor ttestBF
@@ -20,12 +14,7 @@ PMCMR_to_tibble <- function(mod, ...) {
 #' @noRd
 #' @keywords internal
 
-bf_internal_ttest <- function(data,
-                              x,
-                              y,
-                              paired = FALSE,
-                              bf.prior = 0.707,
-                              ...) {
+bf_ttest <- function(data, x, y, paired = FALSE, bf.prior = 0.707, ...) {
   # have a proper cleanup with NA removal
   data %<>%
     ipmisc::long_to_wide_converter(
@@ -51,15 +40,21 @@ bf_internal_ttest <- function(data,
     )
 
   # extracting Bayes Factors and other details
-  parameters::model_parameters(bf_object, verbose = FALSE, ...) %>%
-    parameters::standardize_names(data = ., style = "broom") %>%
+  dplyr::filter(tidy_model_parameters(bf_object), !is.na(bayes.factor)) %>%
     dplyr::rename("bf10" = "bayes.factor") %>%
     dplyr::mutate(log_e_bf10 = log(bf10))
 }
 
 
-#' @title Preparing text to describe which *p*-value adjustment method was used
+#' @title *p*-value adjustment method text
 #' @name p_adjust_text
+#'
+#' @description
+#'
+#' \Sexpr[results=rd, stage=render]{rlang:::lifecycle("stable")}
+#'
+#' Preparing text to describe which *p*-value adjustment method was used
+#'
 #' @return Standardized text description for what method was used.
 #'
 #' @inheritParams pairwise_comparisons
@@ -87,10 +82,15 @@ p_adjust_text <- function(p.adjust.method) {
 
 
 #' @name pairwise_caption
-#' @title Expression containing details about pairwise comparison test
-#' @description This returns an expression containing details about the pairwise
-#'   comparison test and the *p*-value adjustment method. These details are
-#'   typically included in the `ggstatsplot` package plots as a caption.
+#' @title Pairwise comparison test expression
+#'
+#' @description
+#'
+#' \Sexpr[results=rd, stage=render]{rlang:::lifecycle("stable")}
+#'
+#' This returns an expression containing details about the pairwise comparison
+#' test and the *p*-value adjustment method. These details are typically
+#' included in the `ggstatsplot` package plots as a caption.
 #'
 #' @param test.description Text describing the details of the test.
 #' @param caption Additional text to be included in the plot.
@@ -112,7 +112,7 @@ pairwise_caption <- function(caption,
   # which comparisons are shown? (standardize strings)
   pairwise.display <-
     switch(
-      EXPR = substr(x = pairwise.display, start = 1L, stop = 1L),
+      EXPR = substr(pairwise.display, 1L, 1L),
       s = "only significant",
       n = "only non-significant",
       "all"
@@ -122,17 +122,12 @@ pairwise_caption <- function(caption,
   substitute(
     atop(
       displaystyle(top.text),
-      expr = paste(
-        "Pairwise test: ",
-        bold(test.description),
-        "; Comparisons shown: ",
-        bold(pairwise.display)
-      )
+      expr = paste("Pairwise test: ", bold(test), "; Comparisons shown: ", bold(display))
     ),
     env = list(
       top.text = caption,
-      test.description = test.description,
-      pairwise.display = pairwise.display
+      test = test.description,
+      display = pairwise.display
     )
   )
 }
