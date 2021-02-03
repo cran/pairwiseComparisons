@@ -59,6 +59,8 @@ bf_ttest <- function(data, x, y, paired = FALSE, bf.prior = 0.707, ...) {
 #'
 #' @inheritParams pairwise_comparisons
 #'
+#' @importFrom dplyr case_when
+#'
 #' @examples
 #' library(pairwiseComparisons)
 #' p_adjust_text("none")
@@ -66,17 +68,12 @@ bf_ttest <- function(data, x, y, paired = FALSE, bf.prior = 0.707, ...) {
 #' @export
 
 p_adjust_text <- function(p.adjust.method) {
-  switch(
-    EXPR = p.adjust.method,
-    none = "None",
-    bonferroni = "Bonferroni",
-    holm = "Holm",
-    hochberg = "Hochberg",
-    hommel = "Hommel",
-    BH = "FDR",
-    fdr = "FDR",
-    BY = "BY",
-    "Holm"
+  x <- p.adjust.method
+  dplyr::case_when(
+    grepl("^n|^bo|^h", x) ~ paste0(toupper(substr(x, 1, 1)), substr(x, 2, nchar(x))),
+    grepl("^BH|^f", x) ~ "FDR",
+    grepl("^BY", x) ~ "BY",
+    TRUE ~ "Holm"
   )
 }
 
@@ -100,6 +97,8 @@ p_adjust_text <- function(p.adjust.method) {
 #'   `"everything"`/`"all"`. The default is `"significant"`.
 #' @param ... Ignored.
 #'
+#' @importFrom dplyr case_when
+#'
 #' @examples
 #' library(pairwiseComparisons)
 #' pairwise_caption("my caption", "Student's t-test")
@@ -109,15 +108,6 @@ pairwise_caption <- function(caption,
                              test.description,
                              pairwise.display = "significant",
                              ...) {
-  # which comparisons are shown? (standardize strings)
-  pairwise.display <-
-    switch(
-      EXPR = substr(pairwise.display, 1L, 1L),
-      s = "only significant",
-      n = "only non-significant",
-      "all"
-    )
-
   # create expression
   substitute(
     atop(
@@ -127,7 +117,11 @@ pairwise_caption <- function(caption,
     env = list(
       top.text = caption,
       test = test.description,
-      display = pairwise.display
+      display = dplyr::case_when(
+        substr(pairwise.display, 1L, 1L) == "s" ~ "only significant",
+        substr(pairwise.display, 1L, 1L) == "n" ~ "only non-significant",
+        TRUE ~ "all"
+      )
     )
   )
 }
