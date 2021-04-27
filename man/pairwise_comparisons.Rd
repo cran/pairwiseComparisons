@@ -12,7 +12,7 @@ pairwise_comparisons(
   type = "parametric",
   paired = FALSE,
   var.equal = FALSE,
-  tr = 0.1,
+  tr = 0.2,
   bf.prior = 0.707,
   p.adjust.method = "holm",
   k = 2L,
@@ -21,19 +21,21 @@ pairwise_comparisons(
 }
 \arguments{
 \item{data}{A dataframe (or a tibble) from which variables specified are to
-be taken. A matrix or tables will \strong{not} be accepted.}
+be taken. Other data types (e.g., matrix,table, array, etc.) will \strong{not}
+be accepted.}
 
-\item{x}{The grouping variable from the dataframe \code{data}.}
+\item{x}{The grouping (or independent) variable from the dataframe \code{data}.}
 
-\item{y}{The response (a.k.a. outcome or dependent) variable from the
+\item{y}{The response (or outcome or dependent) variable from the
 dataframe \code{data}.}
 
-\item{subject.id}{In case of repeated measures design (\code{paired = TRUE},
-i.e.), this argument specifies the subject or repeated measures id. Note
-that if this argument is \code{NULL} (which is the default), the function
-assumes that the data has already been sorted by such an id by the user and
-creates an internal identifier. So if your data is \strong{not} sorted and you
-leave this argument unspecified, the results can be inaccurate.}
+\item{subject.id}{Relevant in case of repeated measures or within-subjects
+design (\code{paired = TRUE}, i.e.), it specifies the subject or repeated
+measures identifier. \strong{Important}: Note that if this argument is \code{NULL}
+(which is the default), the function assumes that the data has already been
+sorted by such an id by the user and creates an internal identifier. So if
+your data is \strong{not} sorted and you leave this argument unspecified, the
+results can be inaccurate.}
 
 \item{type}{Type of statistic expected (\code{"parametric"} or \code{"nonparametric"}
 or \code{"robust"} or \code{"bayes"}).Corresponding abbreviations are also accepted:
@@ -53,7 +55,7 @@ repeated measures/within-subjects or between-subjects. The default is
 get error stating "Standard error cannot be computed because of Winsorized
 variance of 0 (e.g., due to ties). Try to decrease the trimming level.",
 try to play around with the value of \code{tr}, which is by default set to
-\code{0.1}. Lowering the value might help.}
+\code{0.2}. Lowering the value might help.}
 
 \item{bf.prior}{A number between \code{0.5} and \code{2} (default \code{0.707}), the prior
 width to use in calculating Bayes factors.}
@@ -65,7 +67,7 @@ comparisons. Possible methods are: \code{"holm"} (default), \code{"hochberg"},
 \item{k}{Number of digits after decimal point (should be an integer)
 (Default: \code{k = 2L}).}
 
-\item{...}{Current ignored.}
+\item{...}{Additional arguments passed to other methods.}
 }
 \value{
 A tibble dataframe containing two columns corresponding to group
@@ -87,25 +89,23 @@ respective functions:
 \code{\link[PMCMRplus:durbinAllPairsTest]{PMCMRplus::durbinAllPairsTest()}} (paired) and
 \code{\link[PMCMRplus:kwAllPairsDunnTest]{PMCMRplus::kwAllPairsDunnTest()}} (unpaired)
 \item \emph{robust} :
-\code{\link[WRS2:rmanova]{WRS2::rmmcp()}} (paired) and  \code{\link[WRS2:t1way]{WRS2::lincon()}} (unpaired)
+\code{\link[WRS2:rmanova]{WRS2::rmmcp()}} (paired) and \code{\link[WRS2:t1way]{WRS2::lincon()}} (unpaired)
 \item \emph{Bayes Factor} : \code{\link[BayesFactor:ttestBF]{BayesFactor::ttestBF()}}
 }
 }
 \description{
-\Sexpr[results=rd, stage=render]{rlang:::lifecycle("maturing")}
-
 Calculate parametric, non-parametric, robust, and Bayes Factor pairwise
 comparisons between group levels with corrections for multiple testing.
 }
 \examples{
-
 \donttest{
 # for reproducibility
 set.seed(123)
 library(pairwiseComparisons)
 
-# show me all columns and make the column titles bold
-options(tibble.width = Inf, pillar.bold = TRUE, pillar.subtle_num = TRUE)
+# show all columns and make the column titles bold
+# as a user, you don't need to do this; this is just for the package website
+options(tibble.width = Inf, pillar.bold = TRUE, pillar.neg = TRUE, pillar.subtle_num = TRUE)
 
 #------------------- between-subjects design ----------------------------
 

@@ -1,7 +1,6 @@
 AppVeyor
 Codecov
 Conover
-Covrpage
 Crichtlow
 DOI
 Durbin
@@ -40,9 +39,7 @@ indrajeetpatil
 io
 lifecycle
 mpaa
-setosa
+pkgdown
 svg
 tibble
-versicolor
-virginica
 yellowgreen
