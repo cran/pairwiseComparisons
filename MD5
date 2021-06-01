@@ -1,13 +1,13 @@
-6a18e352d9e7cd948be120c5cad8a9b5 *DESCRIPTION
+79e44abfb2179979e1b4b9e6e827a1cc *DESCRIPTION
 13126da2bad169ecfe01da3858042b62 *LICENSE
 8f3ff8616f27753eb2f99de2c22651ab *NAMESPACE
-37a507b4b641be4609ef013b05934f6b *NEWS.md
+0efaf046cc2d88b23969e52ecef3bf14 *NEWS.md
 e159c89f70bd1346ac96d934fead7650 *R/data.R
 fc2a6efd2abe22c37d72745bceb27e15 *R/global_vars.R
-cbca5e474f8e9f71c4387ecee5542233 *R/helpers.R
-5d0f5f1753a9fdef3e5928f01b0e4174 *R/pairwise_comparisons.R
+a3fa937dc9ef5f179189a3a8f15a2080 *R/helpers.R
+27333a9d7a6747963cf3599e91c0db4b *R/pairwise_comparisons.R
 3466adb4e21bde4a3b8e0ec9a4a6e609 *R/reexports.R
-6f21915363252df9f3da79c06a68fd0f *README.md
+5be0d56401e45a5e015cbfdcc1443521 *README.md
 60e0e78acc2c42531f52352f480329c2 *data/bugs_long.rdata
 91069babfae39db7b08f35ede31084f2 *data/movies_long.rdata
 54a342a94ac6e4232913e999a95d4e94 *data/movies_wide.rdata
@@ -29,7 +29,7 @@ c3978703d8f40f2679795335715e98f4 *man/figures/lifecycle-experimental.svg
 6255c1a466c7dc9cd2a52692be34bf93 *man/movies_wide.Rd
 13938dce6baedd253f81a8f4ffaeca07 *man/p_adjust_text.Rd
 69a3280df6dc95060c245b44708be994 *man/pairwise_caption.Rd
-18fdfbe07ac9b33f1692c37eddc4b844 *man/pairwise_comparisons.Rd
+d8aedfbcd16a34f2ea51bda525c9a0d6 *man/pairwise_comparisons.Rd
 ccd436efc6a3de78bac2165798cf3b8e *man/reexports.Rd
 50f330eeca8db092d6807e04457bd06d *tests/spelling.R
 27ea038f6a1f6b418b4fecf225d1693e *tests/testthat.R

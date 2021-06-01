@@ -1,3 +1,9 @@
+# pairwiseComparisons 3.1.6
+
+  - Maintenance and internal changes.
+  
+  - Improvements to docs.
+
 # pairwiseComparisons 3.1.5
 
   - To avoid confusion among users, the trimming level for all functions is now
